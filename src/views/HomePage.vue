@@ -1,56 +1,88 @@
+<script setup lang="ts">
+import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonInput, IonButton, IonCard, IonCardHeader, IonCardTitle, IonCardContent } from '@ionic/vue';
+import axios from 'axios';
+import { Geolocation } from '@capacitor/geolocation';
+import { ref } from 'vue';
+
+const latitud = ref<number | null>(null);
+const longitud = ref<number | null>(null);
+const location = ref<string>('');
+const weatherData = ref<any>(null);
+
+const apiKey = '6QA8GJZ8C3ANC9MYZJ89HCYFY';
+
+const viewUbicationByCountry = async () => {
+  if (!location.value) return;
+  const url = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${location.value}?key=${apiKey}`;
+  
+  try {
+    const response = await axios.get(url);
+    weatherData.value = response.data;
+  } catch (error) {
+    console.error('Error fetching weather data:', error);
+  }
+};
+
+const viewUbicationByCoordinates = async () => {
+  getLocation();
+  if (latitud.value === null || longitud.value === null) return;
+  const url = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${latitud.value},${longitud.value}?unitGroup=metric&key=${apiKey}`;
+  
+  try {
+    const response = await axios.get(url);
+    weatherData.value = response.data;
+  } catch (error) {
+    console.error('Error fetching weather data by coordinates:', error);
+  }
+};
+
+const getLocation = async () => {
+  try {
+  
+  
+    const position = await Geolocation.getCurrentPosition();
+    latitud.value = position.coords.latitude;
+    longitud.value = position.coords.longitude;
+    
+  } catch (error) {
+    console.error('Error getting location:', error);
+  }
+};
+</script>
+
 <template>
   <ion-page>
-    <ion-header :translucent="true">
+    <ion-header>
       <ion-toolbar>
-        <ion-title>Blank</ion-title>
+        <ion-title>Aplicación para ver el clima</ion-title>
       </ion-toolbar>
     </ion-header>
+    <ion-content class="ion-padding">
+      <ion-input 
+        v-model="location" 
+        label="Ubicación" 
+        placeholder="Ingrese el nombre del país">
+      </ion-input>
+      <ion-button expand="block" @click="viewUbicationByCountry">Buscar por País</ion-button>
+      <ion-button expand="block" @click="viewUbicationByCoordinates">Clima en  la ubicación actual </ion-button>
 
-    <ion-content :fullscreen="true">
-      <ion-header collapse="condense">
-        <ion-toolbar>
-          <ion-title size="large">Blank</ion-title>
-        </ion-toolbar>
-      </ion-header>
-
-      <div id="container">
-        <strong>Ready to create an app?</strong>
-        <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
-      </div>
+      <ion-card v-if="weatherData">
+        <ion-card-header>
+          <ion-card-title>Clima en {{ weatherData.resolvedAddress }}</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p><strong>Temperatura:</strong> {{ weatherData.currentConditions.temp }}°C</p>
+          <p><strong>Velocidad del viento:</strong> {{ weatherData.currentConditions.windspeed }} km/h</p>
+          <p><strong>Probabilidad de lluvia:</strong> {{ weatherData.currentConditions.precipprob }}%</p>
+          <p><strong>Clima general:</strong> {{ weatherData.currentConditions.conditions }}</p>
+          <p><strong>Períodos anteriores y futuros:</strong></p>
+          <ul>
+            <li v-for="(day, index) in weatherData.days" :key="index">
+              {{ day.datetime }} - {{ day.conditions }} - {{ day.temp }}°f
+            </li>
+          </ul>
+        </ion-card-content>
+      </ion-card>
     </ion-content>
   </ion-page>
 </template>
-
-<script setup lang="ts">
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
-</script>
-
-<style scoped>
-#container {
-  text-align: center;
-  
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
-}
-
-#container p {
-  font-size: 16px;
-  line-height: 22px;
-  
-  color: #8c8c8c;
-  
-  margin: 0;
-}
-
-#container a {
-  text-decoration: none;
-}
-</style>
